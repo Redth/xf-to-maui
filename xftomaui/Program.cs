@@ -173,6 +173,9 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
                 text = text.Replace(System.IO.Path.GetFileNameWithoutExtension(fm.from), System.IO.Path.GetFileNameWithoutExtension(fm.to));
             }
 
+            text = text.Replace("Platform.Handlers", "Platform.Handlers");
+            text = text.Replace("\"Forms\"", "\"Forms\"");
+
             context.FileWriteText(sln, text);
         }
     }
