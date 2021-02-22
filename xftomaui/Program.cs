@@ -142,26 +142,46 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
 
     }
 
-    static void RenameFolders(ICakeContext context,  IEnumerable<(string to, string from)> mappings)
+    static void RenameFolders(ICakeContext context,  IEnumerable<(string from, string to)> mappings)
     {
         var baseDir = new DirectoryPath(Consts.BasePath);
 
+        foreach (var map in mappings)
+            MoveDirectory(baseDir.Combine(map.from).FullPath, baseDir.Combine(map.to).FullPath);
 
         foreach (var map in mappings)
         {
-            var current = baseDir.Combine(map.from);
-
-            var newDir = baseDir.Combine(map.to);
-
-            context.EnsureDirectoryExists(newDir);
-
-            context.MoveDirectory(current, newDir);
+            if (context.DirectoryExists(map.from))
+                context.DeleteDirectory(map.from, new DeleteDirectorySettings { Recursive =true, Force = true });
         }
+
+        
     }
 
-    static void RenameFiles(ICakeContext context, IEnumerable<(string to, string from)> mappings)
+    public static void MoveDirectory(string source, string target)
     {
-        var files = context.GetFiles(Consts.BasePath + "**/*.*");
+        var sourcePath = source.TrimEnd('\\', ' ');
+        var targetPath = target.TrimEnd('\\', ' ');
+        var files = System.IO.Directory.EnumerateFiles(sourcePath, "*", System.IO.SearchOption.AllDirectories)
+                            .GroupBy(s=> System.IO.Path.GetDirectoryName(s));
+        foreach (var folder in files)
+        {
+            var targetFolder = folder.Key.Replace(sourcePath, targetPath);
+            System.IO.Directory.CreateDirectory(targetFolder);
+            foreach (var file in folder)
+            {
+                var targetFile = System.IO.Path.Combine(targetFolder, System.IO.Path.GetFileName(file));
+                if (System.IO.File.Exists(targetFile))
+                    System.IO.File.Delete(targetFile);
+                System.IO.File.Move(file, targetFile);
+            }
+        }
+        //System.IO.Directory.Delete(source, true);
+    }
+
+    static void RenameFiles(ICakeContext context, IEnumerable<(string from, string to)> mappings)
+    {
+        var files = context.GetFiles(Consts.BasePath + "**/*");
 
         foreach (var file in files)
         {
