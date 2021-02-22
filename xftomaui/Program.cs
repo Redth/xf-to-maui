@@ -154,6 +154,8 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
             if (context.DirectoryExists(map.from))
                 context.DeleteDirectory(map.from, new DeleteDirectorySettings { Recursive =true, Force = true });
         }
+
+        
     }
 
     public static void MoveDirectory(string source, string target)
@@ -177,9 +179,9 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
         //System.IO.Directory.Delete(source, true);
     }
 
-    static void RenameFiles(ICakeContext context, IEnumerable<(string to, string from)> mappings)
+    static void RenameFiles(ICakeContext context, IEnumerable<(string from, string to)> mappings)
     {
-        var files = context.GetFiles(Consts.BasePath + "**/*.*");
+        var files = context.GetFiles(Consts.BasePath + "**/*");
 
         foreach (var file in files)
         {
