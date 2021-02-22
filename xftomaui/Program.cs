@@ -66,6 +66,8 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
 
         RenameFolders(context, directoryMapping);
 
+        FixSlns(context, filenameMapping, directoryMapping);
+        
         DeleteEmptyDirectories(context, Consts.BasePath);
     }
 
@@ -149,7 +151,33 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
         }
     }
 
-    static void RenameFolders(ICakeContext context,  IEnumerable<(string from, string to)> mappings)
+    static void FixSlns(ICakeContext context, IEnumerable<(string from, string to)> fileMappings, IEnumerable<(string from, string to)> dirMappings)
+    {
+        var slnFiles = context.GetFiles(Consts.BasePath + "**/*.sln");
+
+        foreach (var sln in slnFiles)
+        {
+            var text = context.FileReadText(sln);
+
+            foreach (var dm in dirMappings)
+            {
+                var fromFormatted = dm.from.TrimStart('.', '/').Replace('/', '\\');
+                var toFormatted = dm.to.TrimStart('.', '/').Replace('/', '\\');
+
+                text = text.Replace(fromFormatted, toFormatted);
+            }
+
+            foreach (var fm in fileMappings)
+            {
+                text = text.Replace(fm.from, fm.to);
+                text = text.Replace(System.IO.Path.GetFileNameWithoutExtension(fm.from), System.IO.Path.GetFileNameWithoutExtension(fm.to));
+            }
+
+            context.FileWriteText(sln, text);
+        }
+    }
+
+    static void RenameFolders(ICakeContext context, IEnumerable<(string from, string to)> mappings)
     {
         var baseDir = new DirectoryPath(Consts.BasePath);
 
