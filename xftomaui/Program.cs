@@ -13,7 +13,7 @@ using OfficeOpenXml;
 
 public static class Consts
 {
-    public const string BasePath = "/Users/redth/code/Xamarin.Forms/";
+    public const string BasePath = "C:/xamarin/Xamarin.Forms/"; // "/Users/redth/code/Xamarin.Forms/";
     public const string NameMappingsXlsx = "./NameMappings.xlsx";
 }
 
@@ -76,7 +76,7 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
 
         foreach (var file in context.GetFiles(globPattern))
         {
-            var fileFullPath = file.FullPath;
+            var fileFullPath = PlatformFriendlyPath(context, file);
 
             if (file.Segments.Contains("ControlGallery"))
                 continue;
@@ -111,44 +111,42 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
                     // so we can figure out what the new directory will be and fix the reference
                     var refMapping = directoryMappings.FirstOrDefault(dm => dm.from.TrimEnd('/', '\\') == refDirRelativePath);
 
+                    var currentFilename = refFullPath.GetFilename();
+
+                    var refFileMapping = fileMappings.FirstOrDefault(fm => fm.from.Equals(currentFilename.FullPath));
+
+                    var renamedFilename = refFileMapping != default ? refFileMapping.to : currentFilename;
+
+
+                    // The reference might have its file renamed
+                    var newRefFull = refFullPath.GetDirectory().CombineWithFilePath(renamedFilename);
+
+                    // The reference also be getting moved to another folder
                     if (refMapping != default)
-                    {
-                        var currentFilename = refFullPath.GetFilename();
+                        newRefFull = (new DirectoryPath(Consts.BasePath)).Combine(refMapping.to).CombineWithFilePath(renamedFilename);
 
-                        var refFileMapping = fileMappings.FirstOrDefault(fm => fm.from.Equals(currentFilename.FullPath));
+                    // Get the new file location path but relative to the base working dir
+                    var newFileRelativePath = file.GetDirectory().FullPath.Replace(Consts.BasePath, "./").TrimEnd('/', '\\');
+                    // Look up a mapping for where the new file location directory would be to see if it's also moving
+                    var thisFileMapping = directoryMappings.FirstOrDefault(dm => dm.from.TrimEnd('/', '\\') == newFileRelativePath);
+            
+                    // By default if no mapping is found, it means the file's dir isn't moving so we can use
+                    // a relative path to the new reference path for the existing file's location
+                    var newRefRelativeToFile = file;
 
-                        var renamedFilename = refFileMapping != default ? refFileMapping.to : currentFilename;
+                    // If this file is also moving to a new folder, we need to make the new reference's relative path
+                    // be relative to the NEW location that this file will be in
+                    if (thisFileMapping != default)
+                        newRefRelativeToFile = (new DirectoryPath(Consts.BasePath)).Combine(thisFileMapping.to).CombineWithFilePath(file.GetFilename());
 
+                    var finalnewref = newRefRelativeToFile.GetRelativePath(newRefFull);
 
-                        // Get the full path of where the referenced file will be after we rename/move dirs
-                        var newRefFull = (new DirectoryPath(Consts.BasePath)).Combine(refMapping.to).CombineWithFilePath(renamedFilename);
-
-                        // Get the new file location path but relative to the base working dir
-                        var newFileRelativePath = file.GetDirectory().FullPath.Replace(Consts.BasePath, "./").TrimEnd('/', '\\');
-                        // Look up a mapping for where the new file location directory would be to see if it's also moving
-                        var thisFileMapping = directoryMappings.FirstOrDefault(dm => dm.from.TrimEnd('/', '\\') == newFileRelativePath);
-                
-                        // By default if no mapping is found, it means the file's dir isn't moving so we can use
-                        // a relative path to the new reference path for the existing file's location
-                        var newRefRelativeToFile = file;
-
-                        // If this file is also moving to a new folder, we need to make the new reference's relative path
-                        // be relative to the NEW location that this file will be in
-                        if (thisFileMapping != default)
-                            newRefRelativeToFile = (new DirectoryPath(Consts.BasePath)).Combine(thisFileMapping.to).CombineWithFilePath(file.GetFilename());
-
-                        var finalnewref = newRefRelativeToFile.GetRelativePath(newRefFull);
-
-                        text = text.Replace(rp, finalnewref.FullPath);
-
-                    }
+                    text = text.Replace(rp, PlatformFriendlyPath(context, finalnewref));
                 }
             }
 
             context.FileWriteText(file, text);
         }
-       
-
     }
 
     static void RenameFolders(ICakeContext context,  IEnumerable<(string from, string to)> mappings)
@@ -156,7 +154,7 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
         var baseDir = new DirectoryPath(Consts.BasePath);
 
         foreach (var map in mappings)
-            MoveDirectory(baseDir.Combine(map.from).FullPath, baseDir.Combine(map.to).FullPath);
+            MoveDirectory(context, baseDir.Combine(map.from), baseDir.Combine(map.to));
 
         foreach (var map in mappings)
         {
@@ -165,10 +163,22 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
         }
     }
 
-    public static void MoveDirectory(string source, string target)
+    static string MacPath(Path path)
     {
-        var sourcePath = source.TrimEnd('\\', ' ');
-        var targetPath = target.TrimEnd('\\', ' ');
+        return path.FullPath.Replace('\\', '/');
+    }
+
+    static string PlatformFriendlyPath(ICakeContext context, Path path)
+    {
+        if (context.Environment.Platform.Family == PlatformFamily.Windows)
+            return  path.FullPath.Replace('/', '\\');
+        return path.FullPath;
+    }
+
+    public static void MoveDirectory(ICakeContext context, DirectoryPath sourceDir, DirectoryPath targetDir)
+    {
+        var sourcePath = PlatformFriendlyPath(context, sourceDir).TrimEnd('\\', '/', ' ');
+        var targetPath = PlatformFriendlyPath(context, targetDir).TrimEnd('\\', '/', ' ');
         var files = System.IO.Directory.EnumerateFiles(sourcePath, "*", System.IO.SearchOption.AllDirectories)
                             .GroupBy(s=> System.IO.Path.GetDirectoryName(s));
         foreach (var folder in files)
@@ -191,10 +201,12 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
         foreach (var directory in context.GetSubDirectories(root))
         {
             DeleteEmptyDirectories(context, directory);
-            if (System.IO.Directory.GetFiles(directory.FullPath).Length == 0 && 
-                System.IO.Directory.GetDirectories(directory.FullPath).Length == 0)
+
+            var path = PlatformFriendlyPath(context, directory);
+            if (System.IO.Directory.GetFiles(path).Length == 0 && 
+                System.IO.Directory.GetDirectories(path).Length == 0)
             {
-                System.IO.Directory.Delete(directory.FullPath, false);
+                System.IO.Directory.Delete(path, false);
             }
         }
     }
@@ -205,7 +217,7 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
 
         foreach (var file in files)
         {
-            var filename = System.IO.Path.GetFileName(file.FullPath);
+            var filename = System.IO.Path.GetFileName(PlatformFriendlyPath(context, file));
 
             var map = mappings.FirstOrDefault(m => m.from.Equals(filename));
 
@@ -249,7 +261,7 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
     {
         var result = new List<List<string>>();
 
-        using(var package = new ExcelPackage(new System.IO.FileInfo(xlsxFile.FullPath)))
+        using(var package = new ExcelPackage(new System.IO.FileInfo(PlatformFriendlyPath(context, xlsxFile))))
         {
             var sheet = package.Workbook.Worksheets[sheetName];
 
