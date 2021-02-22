@@ -45,53 +45,6 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
 {
     public override void Run(BuildContext context)
     {
-        // var controlsNamespaces = new List<string>();
-        // controlsNamespaces.AddRange(GetNamespaceCodeDeclarations(context, Consts.BasePath + "src/Controls/**/*.cs"));
-        // controlsNamespaces.AddRange(GetNamespaceCodeDeclarations(context, Consts.BasePath + "src/Forms/**/*.cs"));
-        // context.FileWriteLines("./maui.controls.namespaces.txt", controlsNamespaces.ToArray());
-
-        // context.FileWriteLines("./maui.compat.namespaces.txt",
-        //     GetNamespaceCodeDeclarations(context, Consts.BasePath + "src/Platform.Renderers/**/*.cs").ToArray());
-
-        // context.FileWriteLines("./maui.core.namespaces.txt",
-        //     GetNamespaceCodeDeclarations(context, Consts.BasePath + "src/Platform.Handlers/**/*.cs").ToArray());
-
-
-        // context.FileWriteLines("./maui.essentials.namespaces.txt",
-        //     GetNamespaceCodeDeclarations(context, Consts.BasePath + "src/Essentials/**/*.cs").ToArray());
-
-
-        // var csprojFiles = context.GetFiles(Consts.BasePath + "**/*.csproj");
-        // context.FileWriteLines("./maui.csproj.names.txt", csprojFiles.Select(p => System.IO.Path.GetFileName(p.FullPath)).ToArray ());
-        
-
-
-
-        var dirNames = new List<string>();
-
-        foreach (var dir in context.GetDirectories(Consts.BasePath + "**"))
-        {
-            var rp = dir.GetRelativePath(new DirectoryPath(Consts.BasePath));
-
-            if (dir.Segments.Contains("ControlGallery"))
-                continue;
-
-            if (!dirNames.Contains(dir.FullPath))
-                dirNames.Add(dir.FullPath);
-        }
-
-        context.FileWriteLines("./maui.directories.txt", dirNames.ToArray ());
-        
-
-        var directoryMapping = ReadExcel(context, Consts.NameMappingsXlsx, "Directories", true)
-            .Select(dm => (dm[0], dm[1]));
-
-        FixRelativeFileReferences(context, directoryMapping);
-
-
-
-        return;
-
         ReplaceMappings(context, Consts.NameMappingsXlsx, new [] {
             ("Maui.Essentials", $"{Consts.BasePath}src/Essentials/**/*.cs" ),
             ("Maui.Compatibility", $"{Consts.BasePath}src/Platform.Renderers/**/*.cs" ),
@@ -99,10 +52,23 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
             ("Maui.Controls", $"{Consts.BasePath}src/Controls/**/*.cs" ),
             ("Maui.Core", $"{Consts.BasePath}src/Platform.Handlers/**/*.cs" ),
         });
+
+
+        var directoryMapping = ReadExcel(context, Consts.NameMappingsXlsx, "Directories", true)
+            .Select(dm => (dm[0], dm[1]));
+
+        var filenameMapping = ReadExcel(context, Consts.NameMappingsXlsx, "Files", true)
+            .Select(dm => (dm[0], dm[1]));
+
+        FixRelativeFileReferences(context, directoryMapping, filenameMapping);
+
+        RenameFiles(context, filenameMapping);
+
+        RenameFolders(context, directoryMapping);
     }
 
 
-    static void FixRelativeFileReferences(ICakeContext context, IEnumerable<(string from, string to)> directoryMappings)
+    static void FixRelativeFileReferences(ICakeContext context, IEnumerable<(string from, string to)> directoryMappings, IEnumerable<(string from, string to)> fileMappings)
     {
         var globPattern = Consts.BasePath + "**/*.{csproj,targets,props,shproj,fsproj}";
 
@@ -142,8 +108,13 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
 
                     if (refMapping != default)
                     {
+                        var currentFilename = file.GetFilename();
+
+                        var renamedFilename = fileMappings.FirstOrDefault(fm => fm.from.Equals(currentFilename)).to ?? currentFilename;
+
+
                         // Get the full path of where the referenced file will be after we rename/move dirs
-                        var newRefFull = (new DirectoryPath(Consts.BasePath)).Combine(refMapping.to).CombineWithFilePath(refRelativePath.GetFilename());
+                        var newRefFull = (new DirectoryPath(Consts.BasePath)).Combine(refMapping.to).CombineWithFilePath(renamedFilename);
 
                         // Get the new file location path but relative to the base working dir
                         var newFileRelativePath = file.GetDirectory().FullPath.Replace(Consts.BasePath, "./").TrimEnd('/', '\\');
@@ -157,7 +128,7 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
                         // If this file is also moving to a new folder, we need to make the new reference's relative path
                         // be relative to the NEW location that this file will be in
                         if (fileMapping != default)
-                            newRefRelativeToFile = (new DirectoryPath(Consts.BasePath)).Combine(fileMapping.to).CombineWithFilePath(file.GetFilename());
+                            newRefRelativeToFile = (new DirectoryPath(Consts.BasePath)).Combine(fileMapping.to).CombineWithFilePath(renamedFilename);
 
                         var finalnewref = newRefFull.GetRelativePath(newRefRelativeToFile);
 
@@ -171,10 +142,36 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
 
     }
 
-
-    static void MoveFiles(DirectoryPath newLoc)
+    static void RenameFolders(ICakeContext context,  IEnumerable<(string to, string from)> mappings)
     {
+        var baseDir = new DirectoryPath(Consts.BasePath);
 
+
+        foreach (var map in mappings)
+        {
+            var current = baseDir.Combine(map.from);
+
+            var newDir = baseDir.Combine(map.to);
+
+            context.EnsureDirectoryExists(newDir);
+
+            context.MoveDirectory(current, newDir);
+        }
+    }
+
+    static void RenameFiles(ICakeContext context, IEnumerable<(string to, string from)> mappings)
+    {
+        var files = context.GetFiles(Consts.BasePath + "**/*.*");
+
+        foreach (var file in files)
+        {
+            var filename = System.IO.Path.GetFileName(file.FullPath);
+
+            var map = mappings.FirstOrDefault(m => m.from.Equals(filename));
+
+            if (map != default)
+                context.MoveFile(file, file.GetDirectory().CombineWithFilePath(map.to));
+        }
     }
 
     static void ReplaceMappings(ICakeContext context, FilePath xlsxFile, params (string sheetName, string fileGlobPattern)[] sets)
