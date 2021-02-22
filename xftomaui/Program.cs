@@ -65,6 +65,8 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
         RenameFiles(context, filenameMapping);
 
         RenameFolders(context, directoryMapping);
+
+        DeleteEmptyDirectories(context, Consts.BasePath);
     }
 
 
@@ -81,9 +83,12 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
 
             var text = context.FileReadText(file);
 
-            var matches = Regex.Matches(text, "Include=\"(?<path>.*?)\"", RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace);
+            var allMatches = new List<Match>();
 
-            foreach (Match m in matches)
+            allMatches.AddRange(Regex.Matches(text, "Include=\"(?<path>.*?)\"", RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace));
+            allMatches.AddRange(Regex.Matches(text, "Project=\"(?<path>.*?)\"", RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace));
+
+            foreach (var m in allMatches)
             {
                 var rp = m?.Groups?["path"]?.Value;
 
@@ -108,9 +113,11 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
 
                     if (refMapping != default)
                     {
-                        var currentFilename = file.GetFilename();
+                        var currentFilename = refFullPath.GetFilename();
 
-                        var renamedFilename = fileMappings.FirstOrDefault(fm => fm.from.Equals(currentFilename)).to ?? currentFilename;
+                        var refFileMapping = fileMappings.FirstOrDefault(fm => fm.from.Equals(currentFilename.FullPath));
+
+                        var renamedFilename = refFileMapping != default ? refFileMapping.to : currentFilename;
 
 
                         // Get the full path of where the referenced file will be after we rename/move dirs
@@ -119,7 +126,7 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
                         // Get the new file location path but relative to the base working dir
                         var newFileRelativePath = file.GetDirectory().FullPath.Replace(Consts.BasePath, "./").TrimEnd('/', '\\');
                         // Look up a mapping for where the new file location directory would be to see if it's also moving
-                        var fileMapping = directoryMappings.FirstOrDefault(dm => dm.from.TrimEnd('/', '\\') == newFileRelativePath);
+                        var thisFileMapping = directoryMappings.FirstOrDefault(dm => dm.from.TrimEnd('/', '\\') == newFileRelativePath);
                 
                         // By default if no mapping is found, it means the file's dir isn't moving so we can use
                         // a relative path to the new reference path for the existing file's location
@@ -127,16 +134,18 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
 
                         // If this file is also moving to a new folder, we need to make the new reference's relative path
                         // be relative to the NEW location that this file will be in
-                        if (fileMapping != default)
-                            newRefRelativeToFile = (new DirectoryPath(Consts.BasePath)).Combine(fileMapping.to).CombineWithFilePath(renamedFilename);
+                        if (thisFileMapping != default)
+                            newRefRelativeToFile = (new DirectoryPath(Consts.BasePath)).Combine(thisFileMapping.to).CombineWithFilePath(file.GetFilename());
 
-                        var finalnewref = newRefFull.GetRelativePath(newRefRelativeToFile);
+                        var finalnewref = newRefRelativeToFile.GetRelativePath(newRefFull);
 
                         text = text.Replace(rp, finalnewref.FullPath);
 
                     }
                 }
             }
+
+            context.FileWriteText(file, text);
         }
        
 
@@ -154,8 +163,6 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
             if (context.DirectoryExists(map.from))
                 context.DeleteDirectory(map.from, new DeleteDirectorySettings { Recursive =true, Force = true });
         }
-
-        
     }
 
     public static void MoveDirectory(string source, string target)
@@ -177,6 +184,19 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
             }
         }
         //System.IO.Directory.Delete(source, true);
+    }
+
+    static void DeleteEmptyDirectories(ICakeContext context, DirectoryPath root)
+    {
+        foreach (var directory in context.GetSubDirectories(root))
+        {
+            DeleteEmptyDirectories(context, directory);
+            if (System.IO.Directory.GetFiles(directory.FullPath).Length == 0 && 
+                System.IO.Directory.GetDirectories(directory.FullPath).Length == 0)
+            {
+                System.IO.Directory.Delete(directory.FullPath, false);
+            }
+        }
     }
 
     static void RenameFiles(ICakeContext context, IEnumerable<(string from, string to)> mappings)
