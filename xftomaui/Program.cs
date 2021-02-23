@@ -132,14 +132,20 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
 
         AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Controls/Core/src/Controls.Core.csproj", "Microsoft.Maui.Controls.Core");
         AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Controls/Xaml/src/Controls.Xaml.csproj", "Microsoft.Maui.Controls.Xaml");
-        AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Compatibility/Maps/src/Compatibility.Maps.csproj", "Microsoft.Maui.Controls.Compatibility.Maps");
+        AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Compatibility/Maps/src/Core/Compatibility.Maps.csproj", "Microsoft.Maui.Controls.Compatibility.Maps");
         AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Handlers/test/UnitTests/Handlers.UnitTests.csproj", "Microsoft.Maui.UnitTests");
 
-        AddUsingNamespaceToFiles(context, "Microsoft.Maui.Layouts", Consts.BasePath + "src/Controls/Core/src/View.cs");
+        AddUsingNamespaceToFiles(context, "Microsoft.Maui.Layouts",
+            Consts.BasePath + "src/Controls/Core/src/View.cs",
+            Consts.BasePath + "src/Controls/Core/src/Layout/Layout.cs",
+            Consts.BasePath + "src/Controls/Core/src/Layout/HorizontalStackLayout.cs",
+            Consts.BasePath + "src/Controls/Core/src/Layout/VerticalStackLayout.cs");
 
         AddUsingNamespaceToFiles(context, "Microsoft.Maui.Handlers",
             Consts.BasePath + "src/Handlers/test/UnitTests/TestClasses/HandlerStub.cs",
-            Consts.BasePath + "src/Handlers/test/UnitTests/PropertyMapperTests.cs");
+            Consts.BasePath + "src/Handlers/test/UnitTests/PropertyMapperTests.cs",
+            Consts.BasePath + "src/Controls/Core/src/Layout/HorizontalStackLayout.cs",
+            Consts.BasePath + "src/Controls/Core/src/Layout/VerticalStackLayout.cs");
 
         AddUsingNamespaceToFiles(context, "Microsoft.Maui.Controls", Consts.BasePath + "src/Handlers/test/UnitTests/PropertyMapperTests.cs");
 
@@ -150,7 +156,10 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
     {
         var text = context.FileReadText(file);
 
-        text = text.Replace("</TargetFrameworks>", "</TargetFrameworks>\r\n\t\t<AssemblyName>" + assemblyName + "</AssemblyName>");
+        if (text.Contains("</TargetFrameworks>"))
+            text = text.Replace("</TargetFrameworks>", "</TargetFrameworks>\r\n\t\t<AssemblyName>" + assemblyName + "</AssemblyName>");
+        else
+            text = text.Replace("</TargetFramework>", "</TargetFramework>\r\n\t\t<AssemblyName>" + assemblyName + "</AssemblyName>");
 
         context.FileWriteText(file, text);
     }
@@ -344,6 +353,7 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
             .Replace("Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"Forms\", \"Forms\",", "Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"Controls\", \"Controls\",")
             .Replace("Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"Platform.Handlers\", \"Platform.Handlers\",", "Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"Handlers\", \"Handlers\",")
             .Replace("Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"Platform.Renderers\", \"Platform.Renderers\",", "Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"Compatibility\", \"Compatibility\",")
+            .Replace("Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"Microsoft.Maui.Controls\", \"Microsoft.Maui.Controls\",", "Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"Controls\", \"Controls\",")
             .Replace("src\\Handlers\\test\\DeviceTests.Android\\Handlers.DeviceTests.Android.csproj", "src\\Handlers\\test\\DeviceTests\\Android\\Handlers.DeviceTests.Android.csproj")
             .Replace("src\\Handlers\\test\\DeviceTests.iOS\\Handlers.DeviceTests.iOS.csproj", "src\\Handlers\\test\\DeviceTests\\iOS\\Handlers.DeviceTests.iOS.csproj")
             ;
