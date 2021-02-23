@@ -245,8 +245,8 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
             allMatches.AddRange(Regex.Matches(text, "Include=\"(?<path>.*?)\"", RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace));
             allMatches.AddRange(Regex.Matches(text, "Project=\"(?<path>.*?)\"", RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace));
 
-            allMatches.AddRange(Regex.Matches(text, "file src=\"(?<path>.*?)\"", RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace));
-            allMatches.AddRange(Regex.Matches(text, "reference file=\"(?<path>.*?)\"", RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace));
+            allMatches.AddRange(Regex.Matches(text, "src=\"(?<path>.*?)\"", RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace));
+            allMatches.AddRange(Regex.Matches(text, "file=\"(?<path>.*?)\"", RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace));
 
             foreach (var m in allMatches)
             {
@@ -256,8 +256,8 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
                 {
                     var refRelativePath = new FilePath(rp);
 
-                    if (file.Segments.Contains("eng"))
-                        continue;
+                    //if (file.Segments.Contains("eng"))
+                    //    continue;
                     if (!context.FileExists(refRelativePath.MakeAbsolute(file.GetDirectory())))
                         continue;
 
