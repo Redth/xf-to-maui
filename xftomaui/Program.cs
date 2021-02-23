@@ -154,12 +154,12 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
 
         AddUsingNamespaceToFiles(context, "Microsoft.Maui.Controls", Consts.BasePath + "src/Handlers/test/UnitTests/PropertyMapperTests.cs");
 
-        AddUsingNamespaceToFiles(context, "Microsoft.Maui.Handlers", context.GetFiles(Consts.BasePath + "src/Handlers/test/DeviceTests/Handlers/**/*HandlerTests.*.cs").ToArray());
+        AddUsingNamespaceToFiles(context, "Microsoft.Maui.Handlers", context.GetFiles(Consts.BasePath + "src/Handlers/test/DeviceTests/Handlers/**/*HandlerTests*.cs").ToArray());
 
         context.FileAppendLines(Consts.BasePath + "src/Handlers/src/Properties/AssemblyInfo.cs", 
             new string[] { "[assembly: InternalsVisibleTo(\"Microsoft.Maui.Controls.Core.UnitTests\")]" });
 
-        context.CopyFile(Consts.BasePath + "eng/DevopsNuget.config", Consts.BasePath + "NuGet.config");
+        context.MoveFile(Consts.BasePath + "Xamarin.Forms.sln.DotSettings", Consts.BasePath + "Microsoft.Maui.sln.DotSettings");
     }
 
     static void AddAssemblyNameToCsproj(ICakeContext context, FilePath file, string assemblyName)
