@@ -229,7 +229,7 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
 
     static void FixRelativeFileReferences(ICakeContext context, IEnumerable<(string from, string to)> directoryMappings, IEnumerable<(string from, string to)> fileMappings)
     {
-        var globPattern = Consts.BasePath + "**/*.{csproj,targets,props,shproj,fsproj}";
+        var globPattern = Consts.BasePath + "**/*.{csproj,targets,props,shproj,fsproj,nuspec}";
 
         foreach (var file in context.GetFiles(globPattern))
         {
@@ -244,6 +244,9 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
 
             allMatches.AddRange(Regex.Matches(text, "Include=\"(?<path>.*?)\"", RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace));
             allMatches.AddRange(Regex.Matches(text, "Project=\"(?<path>.*?)\"", RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace));
+
+            allMatches.AddRange(Regex.Matches(text, "file src=\"(?<path>.*?)\"", RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace));
+            allMatches.AddRange(Regex.Matches(text, "reference file=\"(?<path>.*?)\"", RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace));
 
             foreach (var m in allMatches)
             {
