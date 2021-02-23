@@ -132,6 +132,7 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
 
         AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Controls/Core/src/Controls.Core.csproj", "Microsoft.Maui.Controls.Core");
         AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Controls/Xaml/src/Controls.Xaml.csproj", "Microsoft.Maui.Controls.Xaml");
+        AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Controls/Core/test/Controls.Core.UnitTests.csproj", "Microsoft.Maui.Controls.Core.UnitTests");
         AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Compatibility/Maps/src/Core/Compatibility.Maps.csproj", "Microsoft.Maui.Controls.Compatibility.Maps");
         AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Handlers/test/UnitTests/Handlers.UnitTests.csproj", "Microsoft.Maui.UnitTests");
 
@@ -149,6 +150,9 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
 
         AddUsingNamespaceToFiles(context, "Microsoft.Maui.Controls", Consts.BasePath + "src/Handlers/test/UnitTests/PropertyMapperTests.cs");
 
+        context.FileAppendLines(Consts.BasePath + "src/Handlers/src/Properties/AssemblyInfo.cs", 
+            new string[] { "[assembly: InternalsVisibleTo(\"Microsoft.Maui.Controls.Core.UnitTests\")]" });
+            
         context.CopyFile(Consts.BasePath + "eng/DevopsNuget.config", Consts.BasePath + "NuGet.config");
     }
 
