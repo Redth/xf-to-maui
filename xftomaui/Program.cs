@@ -115,6 +115,10 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
         FileFixupsHelper(context, Consts.BasePath + "src/Controls/Xaml/**/*.cs",
             text => text.Replace("Forms.Internals", "Maui.Controls.Internals"));
 
+        FileFixupsHelper(context, Consts.BasePath + "src/Handlers/test/DeviceTests/**/*.cs",
+            text => text.Replace("using Microsoft.Maui;\r\nusing Microsoft.Maui;", "using Microsoft.Maui;")
+            );
+
         FileFixupsHelper(context, Consts.BasePath + "src/**/*.csproj",
             text => {
                 var rnsmap = GetNamespaceMappings(context, Consts.NameMappingsXlsx, "RootNamespace");
@@ -150,9 +154,11 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
 
         AddUsingNamespaceToFiles(context, "Microsoft.Maui.Controls", Consts.BasePath + "src/Handlers/test/UnitTests/PropertyMapperTests.cs");
 
+        AddUsingNamespaceToFiles(context, "Microsoft.Maui.Handlers", context.GetFiles(Consts.BasePath + "src/Handlers/test/DeviceTests/Handlers/**/*HandlerTests.*.cs").ToArray());
+
         context.FileAppendLines(Consts.BasePath + "src/Handlers/src/Properties/AssemblyInfo.cs", 
             new string[] { "[assembly: InternalsVisibleTo(\"Microsoft.Maui.Controls.Core.UnitTests\")]" });
-            
+
         context.CopyFile(Consts.BasePath + "eng/DevopsNuget.config", Consts.BasePath + "NuGet.config");
     }
 
@@ -358,8 +364,6 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
             .Replace("Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"Platform.Handlers\", \"Platform.Handlers\",", "Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"Handlers\", \"Handlers\",")
             .Replace("Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"Platform.Renderers\", \"Platform.Renderers\",", "Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"Compatibility\", \"Compatibility\",")
             .Replace("Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"Microsoft.Maui.Controls\", \"Microsoft.Maui.Controls\",", "Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"Controls\", \"Controls\",")
-            .Replace("src\\Handlers\\test\\DeviceTests.Android\\Handlers.DeviceTests.Android.csproj", "src\\Handlers\\test\\DeviceTests\\Android\\Handlers.DeviceTests.Android.csproj")
-            .Replace("src\\Handlers\\test\\DeviceTests.iOS\\Handlers.DeviceTests.iOS.csproj", "src\\Handlers\\test\\DeviceTests\\iOS\\Handlers.DeviceTests.iOS.csproj")
             ;
             
             context.FileWriteText(sln, text);
