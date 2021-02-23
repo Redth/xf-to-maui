@@ -94,22 +94,25 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
         FileFixupsHelper(context, Consts.BasePath + "src/Controls/Core/**/*.cs",
             text => text.Replace("using Microsoft.Maui.Controls.Platform;", "")
                 .Replace("using Microsoft.Maui.Controls.Platform.Layouts;", "")
-                .Replace("Microsoft.Maui.Controls.Platform.Registrar.Handlers.Register<", "Microsoft.Maui.Registrar.Handlers.Register<")
+                .Replace("Microsoft.Maui.Controls.Platform.Registrar.Handlers.Register", "Microsoft.Maui.Registrar.Handlers.Register")
                 .Replace("Microsoft.Maui.Controls.Platform.ILayout", "Microsoft.Maui.ILayout")
                 .Replace("Microsoft.Maui.Controls.Platform.IView", "Microsoft.Maui.IView")
                 .Replace("public Platform.ILayoutHandler ", "public ILayoutHandler ")
                 .Replace("Forms.MasterDetailPage", "Maui.Controls.MasterDetailPage")
                 .Replace("Forms.ViewCell", "Maui.Controls.ViewCell")
+                .Replace("Forms.Cell", "Maui.Controls.Cell")
                 .Replace("Microsoft.Maui.Controls.Rectangle", "Microsoft.Maui.Rectangle")
                 .Replace("Forms.Binding", "Maui.Controls.Binding")
                 .Replace("Forms.Style", "Maui.Controls.Style")
                 .Replace("Forms.Layout", "Maui.Controls.Layout")
+                .Replace("Forms.ImageButton", "Maui.Controls.ImageButton")
+                .Replace("using Microsoft.Maui.Controls.Platform.Handlers;", "using Microsoft.Maui.Handlers;")
                 .Replace("Forms.VisualMarker", "Maui.Controls.VisualMarker"));
 
         FileFixupsHelper(context, Consts.BasePath + "src/Handlers/test/**/*.cs",
             text => text.Replace("Forms.Button", "Maui.Controls.Button"));
 
-            FileFixupsHelper(context, Consts.BasePath + "src/Controls/Xaml/**/*.cs",
+        FileFixupsHelper(context, Consts.BasePath + "src/Controls/Xaml/**/*.cs",
             text => text.Replace("Forms.Internals", "Maui.Controls.Internals"));
 
         FileFixupsHelper(context, Consts.BasePath + "src/**/*.csproj",
@@ -126,8 +129,43 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
                 return text;
             }
         );
+
+        AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Controls/Core/src/Controls.Core.csproj", "Microsoft.Maui.Controls.Core");
+        AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Controls/Xaml/src/Controls.Xaml.csproj", "Microsoft.Maui.Controls.Xaml");
+        AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Compatibility/Maps/src/Compatibility.Maps.csproj", "Microsoft.Maui.Controls.Compatibility.Maps");
+        AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Handlers/test/UnitTests/Handlers.UnitTests.csproj", "Microsoft.Maui.UnitTests");
+
+        AddUsingNamespaceToFiles(context, "Microsoft.Maui.Layouts", Consts.BasePath + "src/Controls/Core/src/View.cs");
+
+        AddUsingNamespaceToFiles(context, "Microsoft.Maui.Handlers",
+            Consts.BasePath + "src/Handlers/test/UnitTests/TestClasses/HandlerStub.cs",
+            Consts.BasePath + "src/Handlers/test/UnitTests/PropertyMapperTests.cs");
+
+        AddUsingNamespaceToFiles(context, "Microsoft.Maui.Controls", Consts.BasePath + "src/Handlers/test/UnitTests/PropertyMapperTests.cs");
+
+        context.CopyFile(Consts.BasePath + "eng/DevopsNuget.config", Consts.BasePath + "NuGet.config");
     }
 
+    static void AddAssemblyNameToCsproj(ICakeContext context, FilePath file, string assemblyName)
+    {
+        var text = context.FileReadText(file);
+
+        text = text.Replace("</TargetFrameworks>", "</TargetFrameworks>\r\n\t\t<AssemblyName>" + assemblyName + "</AssemblyName>");
+
+        context.FileWriteText(file, text);
+    }
+
+    static void AddUsingNamespaceToFiles(ICakeContext context, string ns, params FilePath[] files)
+    {
+        foreach (var file in files)
+        {
+            var text = context.FileReadText(file);
+
+            text = "using {ns};\r\n" + text;
+
+            context.FileWriteText(file, text);
+        }
+    }
 
     static void FileFixupsHelper(ICakeContext context, string glob, params Func<string, string>[] fixups)
     {
@@ -196,9 +234,6 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
                 {
                     var refRelativePath = new FilePath(rp);
 
-                    if (file.FullPath.Contains("Maps.macOS"))
-                        context.Log.Information("MapsMacos");
-                        
                     if (file.Segments.Contains("eng"))
                         continue;
                     if (!context.FileExists(refRelativePath.MakeAbsolute(file.GetDirectory())))
@@ -224,11 +259,6 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
                     // since it's possible the reference is inside of one or more subfolders 
                     // beyond what the mapping specified
                     var refPathSubDirs = new DirectoryPath("./");
-                    
-                    if (rp.Contains("Xamarin.Forms.Platform.MacOS.csproj")
-                        )
-                        context.Log.Information("..\\Xamarin.Forms.Core\\Xamarin.Forms.Core.csproj");
-
 
                     if (refMapping != default)
                     {
@@ -305,6 +335,19 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
             text = text.Replace("Platform.Handlers", "Platform.Handlers");
             text = text.Replace("\"Forms\"", "\"Forms\"");
 
+            text = text.Replace(".nuspec\\Controls.DualScreen.nuspec = .nuspec\\Controls.DualScreen.nuspec", ".nuspec\\Microsoft.Maui.Controls.DualScreen.nuspec = .nuspec\\Microsoft.Maui.Controls.DualScreen.nuspec")
+            .Replace(".nuspec\\Compatibility.Maps.GTK.nuspec = .nuspec\\Compatibility.Maps.GTK.nuspec",".nuspec\\Microsoft.Maui.Controls.Compatibility.Maps.GTK.nuspec = .nuspec\\Microsoft.Maui.Controls.Compatibility.Maps.GTK.nuspec")
+            .Replace(".nuspec\\Compatibility.Maps.nuspec = .nuspec\\Compatibility.Maps.nuspec",".nuspec\\Microsoft.Maui.Controls.Compatibility.Maps.nuspec = .nuspec\\Microsoft.Maui.Controls.Compatibility.Maps.nuspec")
+            .Replace(".nuspec\\Compatibility.Maps.WPF.nuspec = .nuspec\\Compatibility.Maps.WPF.nuspec",".nuspec\\Microsoft.Maui.Controls.Compatibility.Maps.WPF.nuspec = .nuspec\\Microsoft.Maui.Controls.Compatibility.Maps.WPF.nuspec")
+            .Replace(".nuspec\\Compatibility.GTK.nuspec = .nuspec\\Compatibility.GTK.nuspec",".nuspec\\Microsoft.Maui.Controls.Compatibility.GTK.nuspec = .nuspec\\Microsoft.Maui.Controls.Compatibility.GTK.nuspec")
+            .Replace(".nuspec\\Compatibility.WPF.nuspec = .nuspec\\Compatibility.WPF.nuspec",".nuspec\\Microsoft.Maui.Controls.Compatibility.WPF.nuspec = .nuspec\\Microsoft.Maui.Controls.Compatibility.WPF.nuspec")
+            .Replace("Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"Forms\", \"Forms\",", "Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"Controls\", \"Controls\",")
+            .Replace("Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"Platform.Handlers\", \"Platform.Handlers\",", "Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"Handlers\", \"Handlers\",")
+            .Replace("Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"Platform.Renderers\", \"Platform.Renderers\",", "Project(\"{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"Compatibility\", \"Compatibility\",")
+            .Replace("src\\Handlers\\test\\DeviceTests.Android\\Handlers.DeviceTests.Android.csproj", "src\\Handlers\\test\\DeviceTests\\Android\\Handlers.DeviceTests.Android.csproj")
+            .Replace("src\\Handlers\\test\\DeviceTests.iOS\\Handlers.DeviceTests.iOS.csproj", "src\\Handlers\\test\\DeviceTests\\iOS\\Handlers.DeviceTests.iOS.csproj")
+            ;
+            
             context.FileWriteText(sln, text);
         }
     }
