@@ -14,8 +14,12 @@ using OfficeOpenXml;
 
 public static class Consts
 {
-    //public const string BasePath = "C:/xamarin/Xamarin.Forms/"; // "/Users/redth/code/Xamarin.Forms/";
-    public const string BasePath = "/Users/redth/code/Xamarin.Forms/";
+    public static ICakeContext CakeContext { get;set; }
+    public static string BasePath
+        => CakeContext.Environment.Platform.Family == PlatformFamily.Windows ?
+            "C:/xamarin/Xamarin.Forms/"
+            : "/Users/redth/code/Xamarin.Forms/";
+
     public const string NameMappingsXlsx = "./NameMappings.xlsx";
 }
 
@@ -38,6 +42,7 @@ public class BuildContext : FrostingContext
     public BuildContext(ICakeContext context)
         : base(context)
     {
+        Consts.CakeContext = context;
         Delay = context.Arguments.HasArgument("delay");
     }
 }
@@ -76,9 +81,70 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
         
         DeleteEmptyDirectories(context, Consts.BasePath);
 
-
         if (context.FileExists("./.github/CODEOWNERS"))
             context.DeleteFile("./.github/CODEOWNERS");
+
+
+        FileFixupsHelper(context, Consts.BasePath + "src/**/*.cs",
+            text => text.Replace("using FormsElement = Forms.", "using FormsElement = Maui.Controls."),
+            text => text.Replace("Forms.Color", " Maui.Color"),
+            text => text.Replace("Forms.Size", " Size")
+        );
+
+        FileFixupsHelper(context, Consts.BasePath + "src/Controls/Core/**/*.cs",
+            text => text.Replace("using Microsoft.Maui.Controls.Platform;", "")
+                .Replace("using Microsoft.Maui.Controls.Platform.Layouts;", "")
+                .Replace("Microsoft.Maui.Controls.Platform.Registrar.Handlers.Register<", "Microsoft.Maui.Registrar.Handlers.Register<")
+                .Replace("Microsoft.Maui.Controls.Platform.ILayout", "Microsoft.Maui.ILayout")
+                .Replace("Microsoft.Maui.Controls.Platform.IView", "Microsoft.Maui.IView")
+                .Replace("public Platform.ILayoutHandler ", "public ILayoutHandler ")
+                .Replace("Forms.MasterDetailPage", "Maui.Controls.MasterDetailPage")
+                .Replace("Forms.ViewCell", "Maui.Controls.ViewCell")
+                .Replace("Microsoft.Maui.Controls.Rectangle", "Microsoft.Maui.Rectangle")
+                .Replace("Forms.Binding", "Maui.Controls.Binding")
+                .Replace("Forms.Style", "Maui.Controls.Style")
+                .Replace("Forms.Layout", "Maui.Controls.Layout")
+                .Replace("Forms.VisualMarker", "Maui.Controls.VisualMarker"));
+
+        FileFixupsHelper(context, Consts.BasePath + "src/Handlers/test/**/*.cs",
+            text => text.Replace("Forms.Button", "Maui.Controls.Button"));
+
+            FileFixupsHelper(context, Consts.BasePath + "src/Controls/Xaml/**/*.cs",
+            text => text.Replace("Forms.Internals", "Maui.Controls.Internals"));
+
+        FileFixupsHelper(context, Consts.BasePath + "src/**/*.csproj",
+            text => {
+                var rnsmap = GetNamespaceMappings(context, Consts.NameMappingsXlsx, "RootNamespace");
+                foreach (var item in rnsmap)
+                    text = text.Replace($"<RootNamespace>{item.from}</RootNamespace>", $"<RootNamespace>{item.to}</RootNamespace>");
+                return text;
+            },
+            text => {
+                var anmap = GetNamespaceMappings(context, Consts.NameMappingsXlsx, "AssemblyName");
+                foreach (var item in anmap)
+                    text = text.Replace($"<AssemblyName>{item.from}</AssemblyName>", $"<AssemblyName>{item.to}</AssemblyName>");
+                return text;
+            }
+        );
+    }
+
+
+    static void FileFixupsHelper(ICakeContext context, string glob, params Func<string, string>[] fixups)
+    {
+        foreach (var file in context.GetFiles(glob))
+        {
+            if (file.Segments.Any(s => s.Equals("ControlGallery")))
+                continue;
+
+            var text = context.FileReadText(file);
+
+            foreach (var f in fixups)
+            {
+                text = f(text);
+            }
+
+            context.FileWriteText(file, text);
+        }
     }
 
     static IEnumerable<(string from, string to)> GetNamespaceMappings(ICakeContext context, FilePath xlsxFile, params string[] sheets)
