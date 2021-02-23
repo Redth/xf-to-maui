@@ -161,7 +161,7 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
         {
             var text = context.FileReadText(file);
 
-            text = "using {ns};\r\n" + text;
+            text = $"using {ns};\r\n" + text;
 
             context.FileWriteText(file, text);
         }
