@@ -109,6 +109,9 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
                 .Replace("using Microsoft.Maui.Controls.Platform.Handlers;", "using Microsoft.Maui.Handlers;")
                 .Replace("Forms.VisualMarker", "Maui.Controls.VisualMarker"));
 
+        FileFixupsHelper(context, Consts.BasePath + "src/Essentials/src/AssemblyInfo/AssemblyInfo.cs",
+            text => text.Replace("(\"XamarinEssentials", "(\"Essentials"));
+
         FileFixupsHelper(context, Consts.BasePath + "src/Core/tests/**/*.cs",
             text => text.Replace("Forms.Button", "Maui.Controls.Button"));
 
@@ -148,11 +151,17 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
 
         AddUsingNamespaceToFiles(context, "Microsoft.Maui.Handlers",
             Consts.BasePath + "src/Core/tests/UnitTests/TestClasses/HandlerStub.cs",
+            Consts.BasePath + "src/Core/tests/UnitTests/TestClasses/ButtonHandlerStub.cs",
+            Consts.BasePath + "src/Core/tests/UnitTests/TestClasses/ViewHandlerStub.cs",
             Consts.BasePath + "src/Core/tests/UnitTests/PropertyMapperTests.cs",
+            Consts.BasePath + "src/Core/tests/UnitTests/HostBuilderTests.cs",
             Consts.BasePath + "src/Controls/src/Core/Layout/HorizontalStackLayout.cs",
             Consts.BasePath + "src/Controls/src/Core/Layout/VerticalStackLayout.cs");
 
-        AddUsingNamespaceToFiles(context, "Microsoft.Maui.Controls", Consts.BasePath + "src/Core/tests/UnitTests/PropertyMapperTests.cs");
+        AddUsingNamespaceToFiles(context, "Microsoft.Maui.Controls",
+            Consts.BasePath + "src/Core/tests/UnitTests/PropertyMapperTests.cs",
+            Consts.BasePath + "src/Core/tests/UnitTests/TestClasses/ButtonStub.cs"
+            );
 
         AddUsingNamespaceToFiles(context, "Microsoft.Maui.Handlers", context.GetFiles(Consts.BasePath + "src/Core/tests/DeviceTests/Handlers/**/*HandlerTests*.cs").ToArray());
 
