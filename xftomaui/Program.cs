@@ -91,7 +91,7 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
             text => text.Replace("Forms.Size", " Size")
         );
 
-        FileFixupsHelper(context, Consts.BasePath + "src/Controls/Core/**/*.cs",
+        FileFixupsHelper(context, Consts.BasePath + "src/Controls/src/**/*.cs",
             text => text.Replace("using Microsoft.Maui.Controls.Platform;", "")
                 .Replace("using Microsoft.Maui.Controls.Platform.Layouts;", "")
                 .Replace("Microsoft.Maui.Controls.Platform.Registrar.Handlers.Register", "Microsoft.Maui.Registrar.Handlers.Register")
@@ -109,13 +109,13 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
                 .Replace("using Microsoft.Maui.Controls.Platform.Handlers;", "using Microsoft.Maui.Handlers;")
                 .Replace("Forms.VisualMarker", "Maui.Controls.VisualMarker"));
 
-        FileFixupsHelper(context, Consts.BasePath + "src/Handlers/test/**/*.cs",
+        FileFixupsHelper(context, Consts.BasePath + "src/Core/tests/**/*.cs",
             text => text.Replace("Forms.Button", "Maui.Controls.Button"));
 
-        FileFixupsHelper(context, Consts.BasePath + "src/Controls/Xaml/**/*.cs",
+        FileFixupsHelper(context, Consts.BasePath + "src/Controls/src/Xaml/**/*.cs",
             text => text.Replace("Forms.Internals", "Maui.Controls.Internals"));
 
-        FileFixupsHelper(context, Consts.BasePath + "src/Handlers/test/DeviceTests/**/*.cs",
+        FileFixupsHelper(context, Consts.BasePath + "src/Core/tests/DeviceTests/**/*.cs",
             text => text.Replace("using Microsoft.Maui;\r\nusing Microsoft.Maui;", "using Microsoft.Maui;")
             );
 
@@ -134,29 +134,29 @@ public sealed class DefaultTask : FrostingTask<BuildContext>
             }
         );
 
-        AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Controls/Core/src/Controls.Core.csproj", "Microsoft.Maui.Controls.Core");
-        AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Controls/Xaml/src/Controls.Xaml.csproj", "Microsoft.Maui.Controls.Xaml");
-        AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Controls/Core/test/Controls.Core.UnitTests.csproj", "Microsoft.Maui.Controls.Core.UnitTests");
+        AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Controls/src/Core/Controls.Core.csproj", "Microsoft.Maui.Controls.Core");
+        AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Controls/src/Xaml/Controls.Xaml.csproj", "Microsoft.Maui.Controls.Xaml");
+        AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Controls/tests/Core.UnitTests/Controls.Core.UnitTests.csproj", "Microsoft.Maui.Controls.Core.UnitTests");
         AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Compatibility/Maps/src/Core/Compatibility.Maps.csproj", "Microsoft.Maui.Controls.Compatibility.Maps");
-        AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Handlers/test/UnitTests/Handlers.UnitTests.csproj", "Microsoft.Maui.UnitTests");
+        AddAssemblyNameToCsproj(context, Consts.BasePath + "src/Core/tests/UnitTests/Core.UnitTests.csproj", "Microsoft.Maui.UnitTests");
 
         AddUsingNamespaceToFiles(context, "Microsoft.Maui.Layouts",
-            Consts.BasePath + "src/Controls/Core/src/View.cs",
-            Consts.BasePath + "src/Controls/Core/src/Layout/Layout.cs",
-            Consts.BasePath + "src/Controls/Core/src/Layout/HorizontalStackLayout.cs",
-            Consts.BasePath + "src/Controls/Core/src/Layout/VerticalStackLayout.cs");
+            Consts.BasePath + "src/Controls/src/Core/View.cs",
+            Consts.BasePath + "src/Controls/src/Core/Layout/Layout.cs",
+            Consts.BasePath + "src/Controls/src/Core/Layout/HorizontalStackLayout.cs",
+            Consts.BasePath + "src/Controls/src/Core/Layout/VerticalStackLayout.cs");
 
         AddUsingNamespaceToFiles(context, "Microsoft.Maui.Handlers",
-            Consts.BasePath + "src/Handlers/test/UnitTests/TestClasses/HandlerStub.cs",
-            Consts.BasePath + "src/Handlers/test/UnitTests/PropertyMapperTests.cs",
-            Consts.BasePath + "src/Controls/Core/src/Layout/HorizontalStackLayout.cs",
-            Consts.BasePath + "src/Controls/Core/src/Layout/VerticalStackLayout.cs");
+            Consts.BasePath + "src/Core/tests/UnitTests/TestClasses/HandlerStub.cs",
+            Consts.BasePath + "src/Core/tests/UnitTests/PropertyMapperTests.cs",
+            Consts.BasePath + "src/Controls/src/Core/Layout/HorizontalStackLayout.cs",
+            Consts.BasePath + "src/Controls/src/Core/Layout/VerticalStackLayout.cs");
 
-        AddUsingNamespaceToFiles(context, "Microsoft.Maui.Controls", Consts.BasePath + "src/Handlers/test/UnitTests/PropertyMapperTests.cs");
+        AddUsingNamespaceToFiles(context, "Microsoft.Maui.Controls", Consts.BasePath + "src/Core/tests/UnitTests/PropertyMapperTests.cs");
 
-        AddUsingNamespaceToFiles(context, "Microsoft.Maui.Handlers", context.GetFiles(Consts.BasePath + "src/Handlers/test/DeviceTests/Handlers/**/*HandlerTests*.cs").ToArray());
+        AddUsingNamespaceToFiles(context, "Microsoft.Maui.Handlers", context.GetFiles(Consts.BasePath + "src/Core/tests/DeviceTests/Handlers/**/*HandlerTests*.cs").ToArray());
 
-        context.FileAppendLines(Consts.BasePath + "src/Handlers/src/Properties/AssemblyInfo.cs", 
+        context.FileAppendLines(Consts.BasePath + "src/Core/src/Properties/AssemblyInfo.cs", 
             new string[] { "[assembly: InternalsVisibleTo(\"Microsoft.Maui.Controls.Core.UnitTests\")]" });
 
         context.MoveFile(Consts.BasePath + "Xamarin.Forms.sln.DotSettings", Consts.BasePath + "Microsoft.Maui.sln.DotSettings");
